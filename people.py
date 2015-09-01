@@ -124,6 +124,9 @@ class PeopleDB:
                 dpath.util.set(obj, key, data, separator='.')
                 cur.execute("UPDATE people SET data = %s", (obj,))
 
+    def people_list(self):
+        obj = self.obj_dump()
+        return [person['id'] for person in obj]
 
 def prompt_yesno(text, default=False):
     sys.stderr.write(text + ' ')
@@ -198,5 +201,9 @@ if __name__ == "__main__":
         except KeyError as e:
             print(e)
             exit(1)
+
+    elif arguments['list']:
+        ppl = db.people_list()
+        print(ppl)
 
     db.disconnect()
