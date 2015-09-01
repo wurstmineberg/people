@@ -122,7 +122,7 @@ class PeopleDB:
 
                 # Update the data at key
                 dpath.util.set(obj, key, data, separator='.')
-                cur.execute("UPDATE people SET data = %s", (obj,))
+                cur.execute("UPDATE people SET data = %s WHERE id=%s", (obj, person))
 
     def people_list(self):
         obj = self.obj_dump()
