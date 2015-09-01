@@ -65,10 +65,16 @@ class PeopleDB:
         cur.execute("SELECT id, data, version FROM people")
         result = cur.fetchall()
         if result:
-            obj = {}
+            if version <= 2:
+                obj = []
+            else:
+                obj = {}
             for uid, data, v in result:
                 converter = PersonConverter(uid, data, v)
-                obj[uid] = converter.get_version(version)
+                if version <= 2:
+                    obj.append(converter.get_version(version))
+                else:
+                    obj[uid] = converter.get_version(version)
         return obj
 
     @transaction
@@ -80,14 +86,23 @@ class PeopleDB:
         cur.execute("DELETE FROM people")
         if self.verbose:
             print('Importing data...')
-        for wmbid, person in data['people'].items():
-            cur.execute("INSERT INTO people (id, data, version) VALUES (%s, %s, %s)", (wmbid, person, version))
+        for obj in data['people']:
+            if version <= 2:
+                items = obj
+                wmbid = obj['id']
+            else:
+                wmbid = obj
+                items = data['people'][obj]
+            cur.execute("INSERT INTO people (id, data, version) VALUES (%s, %s, %s)", (wmbid, items, version))
         if self.verbose:
             print('Done!')
 
     def json_dump(self, version=2, pretty=True):
         arr = self.obj_dump(version=version)
-        obj = {'people': arr, 'version': version}
+        if version <= 2:
+            obj = {'people': arr}
+        else:
+            obj = {'people': arr, 'version': version}
         if pretty:
             return json.dumps(obj, sort_keys=True, indent=4)
         else:
