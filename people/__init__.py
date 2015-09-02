@@ -1,1 +1,1 @@
-from people import PeopleDB, PersonConverter
+from .people import PeopleDB, PersonConverter

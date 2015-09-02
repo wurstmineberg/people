@@ -35,6 +35,8 @@ import sys
 import os
 from distutils.util import strtobool
 
+from passlib.apps import custom_app_context as pwd_context
+
 from docopt import docopt
 
 __version__ = '0.1'
@@ -146,12 +148,49 @@ class PeopleDB:
         cur.execute("UPDATE people SET data = %s WHERE id=%s", (obj, person))
 
     @transaction
-    def person_add(self, name, cur=None):
-        pass
+    def person_add(self, uid, cur=None, version=2):
+        cur.execute("INSERT INTO people (id, data, version) VALUES (%s, %s, %s)", (uid, {}, version))
 
     def people_list(self):
         obj = self.obj_dump()
         return [key for key, person in obj.items()]
+
+    @transaction
+    def person_has_password(self, uid, cur=None):
+        """This checks if the person has a password entry in the DB"""
+        cur.execute("SELECT hash FROM users WHERE id = %s", (uid,))
+        result = cur.fetchone()
+        if result is not None:
+            return True
+        return False
+
+    @transaction
+    def person_set_password(self, uid, password, cur=None):
+        """This sets a new password for the person with the uid specified"""
+        result = self.person_show(uid)
+        if not result:
+            raise KeyError("Person '{}' does not exist in the people table. Use person_add first.".format(person))
+
+        # If we made it this far the person exists
+        # Generate a password
+        hash = pwd_context.encrypt(password)
+
+        # Store it in the DB. This is an upsert, see http://www.the-art-of-web.com/sql/upsert/ for details
+        cur.execute("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE")
+        cur.execute("WITH upsert AS (UPDATE users SET hash = %s WHERE id = %s RETURNING *) INSERT INTO users (id, hash) SELECT %s, %s WHERE NOT EXISTS (SELECT * FROM upsert)", (hash, uid, uid, hash))
+
+    @transaction
+    def person_verify_password(self, uid, password, cur=None):
+        """This verifies the password"""
+        try:
+            cur.execute("SELECT hash FROM users WHERE id = %s", (uid,))
+            result = cur.fetchone()
+            if result:
+                hash = result[0]
+                return pwd_context.verify(password, hash)
+        except KeyError:
+            return False
+        return False
 
 
 class PersonConverter:
