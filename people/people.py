@@ -41,7 +41,7 @@ from docopt import docopt
 
 __version__ = '0.1'
 DEFAULT_CONFIG = {
-    "connectionstring": "host=localhost dbname=wurstmineberg",
+    "connectionstring": "postgresql://localhost/wurstmineberg",
 }
 
 def transaction(func):
@@ -153,7 +153,10 @@ class PeopleDB:
 
     def people_list(self):
         obj = self.obj_dump()
-        return [key for key, person in obj.items()]
+        if type(obj) is list:
+            return [obj['id'] for obj in obj]
+        else:
+            return [key for key, person in obj.items()]
 
     @transaction
     def person_has_password(self, uid, cur=None):
