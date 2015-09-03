@@ -9,6 +9,8 @@ Usage:
   people [options] get <name> [<key>]
   people [options] set <name> <key> <value>
   people [options] list
+  people [options] gentoken <name>
+  people [options] add <person>
   people -h | --help
   people --version
 
@@ -34,8 +36,7 @@ import dpath.util
 import sys
 import os
 from distutils.util import strtobool
-
-from passlib.apps import custom_app_context as pwd_context
+import uuid
 
 from docopt import docopt
 
@@ -159,41 +160,20 @@ class PeopleDB:
             return [key for key, person in obj.items()]
 
     @transaction
-    def person_has_password(self, uid, cur=None):
-        """This checks if the person has a password entry in the DB"""
-        cur.execute("SELECT hash FROM users WHERE id = %s", (uid,))
-        result = cur.fetchone()
-        if result is not None:
-            return True
-        return False
+    def person_generate_token(self, uid, cur=None):
+        """Generates a one-time token for user registration. Invalidates old tokens"""
+        if uid in self.people_list():
+            cur.execute("DELETE FROM user_tokens WHERE wmbid = %s", (uid,))
+            token = str(uuid.uuid4())
+            cur.execute("INSERT INTO user_tokens (wmbid, token) VALUES (%s, %s)", (uid, token))
+            return token
+        else:
+            raise KeyError("Unkown person {}".format(uid))
 
     @transaction
-    def person_set_password(self, uid, password, cur=None):
-        """This sets a new password for the person with the uid specified"""
-        result = self.person_show(uid)
-        if not result:
-            raise KeyError("Person '{}' does not exist in the people table. Use person_add first.".format(person))
-
-        # If we made it this far the person exists
-        # Generate a password
-        hash = pwd_context.encrypt(password)
-
-        # Store it in the DB. This is an upsert, see http://www.the-art-of-web.com/sql/upsert/ for details
-        cur.execute("LOCK TABLE users IN SHARE ROW EXCLUSIVE MODE")
-        cur.execute("WITH upsert AS (UPDATE users SET hash = %s WHERE id = %s RETURNING *) INSERT INTO users (id, hash) SELECT %s, %s WHERE NOT EXISTS (SELECT * FROM upsert)", (hash, uid, uid, hash))
-
-    @transaction
-    def person_verify_password(self, uid, password, cur=None):
-        """This verifies the password"""
-        try:
-            cur.execute("SELECT hash FROM users WHERE id = %s", (uid,))
-            result = cur.fetchone()
-            if result:
-                hash = result[0]
-                return pwd_context.verify(password, hash)
-        except KeyError:
-            return False
-        return False
+    def clear_tokens(self, cur=None):
+        """Clears all one-time tokens from the database"""
+        cur.execute("DELETE FROM user_tokens")
 
 
 class PersonConverter:
@@ -366,5 +346,14 @@ if __name__ == "__main__":
 
     elif arguments['add']:
         ppl = db.person_add()
+
+    elif arguments['gentoken']:
+        if not '<name>' in arguments:
+            print('token: No Wurstmineberg ID given')
+        else:
+            uid = arguments['<name>']
+            token = db.person_generate_token(uid)
+            print("Generated token for '{}': {}".format(uid, token))
+
 
     db.disconnect()
