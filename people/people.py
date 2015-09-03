@@ -65,7 +65,7 @@ class PeopleDB:
 
     @transaction
     def obj_dump(self, cur=None, version=2):
-        cur.execute("SELECT id, data, version FROM people")
+        cur.execute("SELECT wmbid, data, version FROM people")
         result = cur.fetchall()
         if result:
             if version <= 2:
@@ -96,7 +96,7 @@ class PeopleDB:
             else:
                 wmbid = obj
                 items = data['people'][obj]
-            cur.execute("INSERT INTO people (id, data, version) VALUES (%s, %s, %s)", (wmbid, items, version))
+            cur.execute("INSERT INTO people (wmbid, data, version) VALUES (%s, %s, %s)", (wmbid, items, version))
         if self.verbose:
             print('Done!')
 
@@ -118,14 +118,14 @@ class PeopleDB:
 
     @transaction
     def person_show(self, person, cur=None):
-        cur.execute("SELECT data FROM people WHERE id = %s", (person,))
+        cur.execute("SELECT data FROM people WHERE wmbid = %s", (person,))
         result = cur.fetchone()
         if result:
             return result[0]
 
     @transaction
     def person_get_key(self, person, key, cur=None):
-        cur.execute("SELECT data FROM people WHERE id = %s", (person,))
+        cur.execute("SELECT data FROM people WHERE wmbid = %s", (person,))
         result = cur.fetchone()
         if result:
             obj = result[0]
@@ -138,7 +138,7 @@ class PeopleDB:
     def person_set_key(self, person, key, data, cur=None):
         # Select the row for update, this activates row level locking
         # We don't update in place because this is only available in psql 9.5 :(
-        cur.execute("SELECT data FROM people WHERE id = %s FOR UPDATE", (person,))
+        cur.execute("SELECT data FROM people WHERE wmbid = %s FOR UPDATE", (person,))
         result = cur.fetchone()
         if not result:
             raise KeyError("Person '{}' does not exist in the database".format(person))
@@ -146,11 +146,11 @@ class PeopleDB:
 
         # Update the data at key
         dpath.util.set(obj, key, data, separator='.')
-        cur.execute("UPDATE people SET data = %s WHERE id=%s", (obj, person))
+        cur.execute("UPDATE people SET data = %s WHERE wmbid=%s", (obj, person))
 
     @transaction
     def person_add(self, uid, cur=None, version=2):
-        cur.execute("INSERT INTO people (id, data, version) VALUES (%s, %s, %s)", (uid, {}, version))
+        cur.execute("INSERT INTO people (wmbid, data, version) VALUES (%s, %s, %s)", (uid, {}, version))
 
     def people_list(self):
         obj = self.obj_dump()
