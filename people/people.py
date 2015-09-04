@@ -103,11 +103,7 @@ class PeopleDB:
             print('Done!')
 
     def json_dump(self, version=3, pretty=True):
-        arr = self.obj_dump(version=version)
-        if version <= 2:
-            obj = {'people': arr}
-        else:
-            obj = {'people': arr, 'version': version}
+        obj = self.obj_dump(version=version)
         if pretty:
             return json.dumps(obj, sort_keys=True, indent=4)
         else:
@@ -339,7 +335,10 @@ class PersonConverter:
 
     def _convert_v3_v2(self):
         v3 = self.person_obj
-        v2 = {'minecraft_previous': []}
+        v2 = {
+            'id': self.uid,
+            'minecraft_previous': []
+        }
 
         log_msg = 'Warning: Convert people.json v3 to v2: ID "{}": '.format(self.uid)
 
@@ -432,6 +431,8 @@ class PersonConverter:
                 # Print if we ignored any keys
                 print(log_msg + 'Ignoring unkown entry for key {}'.format(key), file=sys.stderr)
 
+        if len(v2['minecraft_previous']) == 0:
+            del v2['minecraft_previous']
         return v2
 
 
