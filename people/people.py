@@ -38,6 +38,7 @@ import sys
 import os
 from distutils.util import strtobool
 import uuid
+import iso8601
 
 from docopt import docopt
 
@@ -65,24 +66,22 @@ class PeopleDB:
         self.conn = None
 
     @transaction
-    def obj_dump(self, cur=None, version=2):
+    def obj_dump(self, cur=None, version=3):
         cur.execute("SELECT wmbid, data, version FROM people")
         result = cur.fetchall()
         if result:
-            if version <= 2:
-                obj = []
-            else:
-                obj = {}
+            # use v3 as base as the db probably has v3 anyways
+            obj = {"version": 3, "people": {}}
             for uid, data, v in result:
                 converter = PersonConverter(uid, data, v)
-                if version <= 2:
-                    obj.append(converter.get_version(version))
-                else:
-                    obj[uid] = converter.get_version(version)
-        return obj
+                converter.get_version(3)
+                obj['people'][uid] = converter.get_version(3)
+            # now for converting everything for realsies
+            peopleconv = PeopleConverter(obj)
+            return peopleconv.get_version(version)
 
     @transaction
-    def obj_import(self, data, version=2, pretty=True, cur=None):
+    def obj_import(self, data, version=3, pretty=True, cur=None):
         """This will import a dict in the database, dropping all previous data!"""
         # Delete all records
         if self.verbose:
@@ -90,6 +89,8 @@ class PeopleDB:
         cur.execute("DELETE FROM people")
         if self.verbose:
             print('Importing data...')
+        converter = PeopleConverter(data)
+        data = converter.get_version(version)
         for obj in data['people']:
             if version <= 2:
                 items = obj
@@ -101,7 +102,7 @@ class PeopleDB:
         if self.verbose:
             print('Done!')
 
-    def json_dump(self, version=2, pretty=True):
+    def json_dump(self, version=3, pretty=True):
         arr = self.obj_dump(version=version)
         if version <= 2:
             obj = {'people': arr}
@@ -112,7 +113,7 @@ class PeopleDB:
         else:
             return json.dumps(obj)
 
-    def json_import(self, string, version=2, pretty=True):
+    def json_import(self, string, version=3, pretty=True):
         """This will import a JSON string in the database, dropping all previous data!"""
         data = json.loads(string)
         return self.obj_import(data)
@@ -169,7 +170,7 @@ class PeopleDB:
         return self.person_modify_data(person, _del_key)
 
     @transaction
-    def person_add(self, uid, cur=None, version=2):
+    def person_add(self, uid, cur=None, version=3):
         cur.execute("INSERT INTO people (wmbid, data, version) VALUES (%s, %s, %s)", (uid, {}, version))
 
     def people_list(self):
@@ -196,6 +197,56 @@ class PeopleDB:
         cur.execute("DELETE FROM user_tokens")
 
 
+class PeopleConverter:
+    def __init__(self, obj):
+        self.obj = obj
+        self.version = 2
+        if 'version' in obj:
+            self.version = obj['version']
+
+    def get_version(self, version):
+        if self.version == version:
+            return self.obj
+        elif self.version == 2 and version == 3:
+            return self._convert_v2_v3()
+        elif self.version == 3 and version == 2:
+            return self._convert_v3_v2()
+        else:
+            raise NotImplementedError("Converting anything other than between v2 and v3 is not implemented. "+
+                "Wanted to convert from {} to {}".format(self.version, version))
+
+    def _convert_v3_v2(self):
+        # We just need to convert the users and sort them.
+        v2_people = []
+        for wmbid, value in self.obj['people'].items():
+            personconv = PersonConverter(wmbid, value, 3)
+            v2_people.append(personconv.get_version(2))
+        v2_people.sort(key=lambda p: p['SORT_DATE'])
+
+        # remove the temporary date
+        for person in v2_people:
+            del person['SORT_DATE']
+
+        return {
+            "people": v2_people,
+            "version": 2
+        }
+
+    def _convert_v2_v3(self):
+        # This is even easier.
+        people = {}
+        for person in self.obj['people']:
+            wmbid = person['id']
+            personconv = PersonConverter(wmbid, person, 2)
+            people[wmbid] = personconv.get_version(3)
+
+        return {
+            "people": people,
+            "version": 3
+        }
+
+
+
 class PersonConverter:
     def __init__(self, uid, person_obj, version):
         self.uid = uid
@@ -207,8 +258,10 @@ class PersonConverter:
             return self.person_obj
         elif self.version == 2 and version == 3:
             return self._convert_v2_v3()
+        elif self.version == 3 and version == 2:
+            return self._convert_v3_v2()
         else:
-            raise NotImplementedError("Converting anything other than v2 to v3 is not implemented. "+
+            raise NotImplementedError("Converting anything other than between v2 and v3 is not implemented. "+
                 "Wanted to convert from {} to {}".format(self.version, version))
 
     def _convert_v2_v3(self):
@@ -245,7 +298,8 @@ class PersonConverter:
             elif key == 'options':
                 newp['options'] = value
             elif key == 'reddit':
-                newp['reddit'] = oldp['reddit']
+                # we don't care anymore
+                pass
             elif key == 'status':
                 if value in ['former', 'founding', 'invited', 'later']:
                     newp['statusHistory'][0]['status'] = value
@@ -264,6 +318,8 @@ class PersonConverter:
                     newp['statusHistory'][0]['date'] = value
                 else:
                     print(log_msg + 'join_date given but not able to match status. Please fix manually', file=sys.stderr)
+            elif key == 'slack':
+                newp['slack'] = value
             elif key == 'twitter':
                 newp['twitter'] = {
                     'username': value
@@ -271,14 +327,112 @@ class PersonConverter:
             elif key == 'website':
                 newp['website'] = value
             elif key == 'wiki':
-                newp['wiki'] = value
+                # best guess
+                newp['wiki'] = "User:" + value
             elif key in ['irc', 'id', 'nicks']:
                 pass
             else:
-                # Check if we ignored any keys
+                # Print if we ignored any keys
                 print(log_msg + 'Ignoring unkown entry for key {}'.format(key), file=sys.stderr)
 
         return newp
+
+    def _convert_v3_v2(self):
+        v3 = self.person_obj
+        v2 = {'minecraft_previous': []}
+
+        log_msg = 'Warning: Convert people.json v3 to v2: ID "{}": '.format(self.uid)
+
+        for key, value in v3.items():
+            if key == 'alt':
+                v2['minecraft_previous'].extend(value)
+            elif key == 'base':
+                # We can't really tell which one is the 'main' base
+                # Just return the first base with an item
+                for base in value:
+                    if 'tunnelItem' in base:
+                        v2['fav_item'] = base['tunnelItem']
+            elif key == 'description':
+                v2['description'] = value
+            elif key == 'favColor':
+                v2['favColor'] = value
+            elif key == 'gravatar':
+                v2['gravatar'] = value
+            elif key == 'minecraft':
+                if 'uuid' in value:
+                    v2['minecraftUUID'] = value['uuid']
+                if 'nicks' in value:
+                    v2['minecraft'] = value['nicks'][0]
+                    if len(value['nicks']) >= 2:
+                        v2['minecraft_previous'].extend(value['nicks'][1:])
+            elif key == 'name':
+                v2['name'] = value
+            elif key == 'options':
+                v2['options'] = value
+            elif key == 'statusHistory':
+                # Oh well, the fun begins...
+                # This was hard going from v2 to v3 but the other way round seems like even more fun.
+                # But whatever, let's get this over with.
+
+                # We only care about the first and the last item
+                curstatus = value[-1]
+                by = curstatus.get('by', None)
+                datestr = curstatus.get('date', None)
+                reason = curstatus.get('reason', None)
+                status = curstatus.get('status', None)
+
+                if status in ['former', 'founding', 'invited', 'later']:
+                    # these fields translate pretty much 1:1
+                    # we need to care about postfreeze tough. Also vetoes.
+                    v2['status'] = status
+                    if status == 'later' and datestr is not None:
+                        # *sigh*
+                        dt = iso8601.parse_date(datestr)
+                        if dt > datetime.datetime(2013, 11, 2, 17, 33, 45, tzinfo=datetime.timezone.utc):
+                            v2['status'] = 'postfreeze'
+                    if status == 'former' and reason == 'vetoed':
+                        v2['status'] = 'vetoed'
+                elif status == 'disabled':
+                    # we can't really do anything else here
+                    v2['status'] = 'former'
+                elif status == 'guest':
+                    # uhm well. help??
+                    v2['status'] = 'former'
+
+                # okay now we need to find out where to sort them in the v2 file
+                # for this we look for the first date we can find
+                # we then save it in a temporary key that is later discarded
+                sortdate = None
+                for item in value:
+                    if 'date' in item:
+                        if not sortdate:
+                            sortdate = iso8601.parse_date(item['date'])
+                        # was there some kind of join activity going on?
+                        if 'status' in item and item['status'] in ['former', 'founding', 'later']:
+                            v2['join_date'] = item['date']
+                            if 'by' in item:
+                                v2['invitedBy'] = item['by']
+                # We really need a date here. If we couldn't find one just take today
+                if not sortdate:
+                    print(log_msg + "Doesn't have sort date for {}".format(self.uid), file=sys.stderr)
+                    sortdate = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                v2['SORT_DATE'] = sortdate
+
+            elif key == 'twitter':
+                if 'username' in value:
+                    v2['twitter'] = value['username']
+            elif key == 'website':
+                v2['website'] = value
+            elif key == 'wiki':
+                if value.startswith('User:'):
+                    v2['wiki'] = value[len('User:'):]
+            elif key in ['mojira', 'openID', 'slack']:
+                pass
+            else:
+                # Print if we ignored any keys
+                print(log_msg + 'Ignoring unkown entry for key {}'.format(key), file=sys.stderr)
+
+        return v2
 
 
 
