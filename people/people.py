@@ -129,10 +129,9 @@ class PeopleDB:
         result = cur.fetchone()
         if result:
             obj = result[0]
-            data = dpath.util.get(obj, key, separator='.')
-            return data
+            return dpath.util.get(obj, key, separator='.')
         else:
-            raise KeyError("Key '{}' or person '{}' does not exist in the database".format(key, person))
+            raise KeyError("Person '{}' does not exist in the database".format(person))
 
     @transaction
     def person_set_key(self, person, key, data, cur=None):
@@ -330,7 +329,7 @@ if __name__ == "__main__":
             else:
                 data = db.person_show(arguments['<name>'])
         except KeyError as e:
-            print(e)
+            print("Key not found: '{}'".format(arguments['<key>']), file=sys.stderr)
             exit(1)
 
     elif arguments['set']:
