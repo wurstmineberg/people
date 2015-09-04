@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-"""Script to dump and modify the people database
+"""Script to dump and modify the people database. Parameters with 'name' always refer to the Wurstmineberg ID for the person.
 
 Usage:
   people [options] dump [<filename>]
@@ -10,18 +10,18 @@ Usage:
   people [options] setkey <name> <key> <value>
   people [options] delkey <name> <key>
   people [options] list
-  people [options] gentoken <name>
-  people [options] add <person>
-  people -h | --help
-  people --version
+  people [options] add <name> <status>
+  people [options] status <name> <status> [<reason>]
+  people (--help | --version)
 
 Options:
-  -h, --help         Print this message and exit.
-  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/database.json].
-  --version          Print version info and exit.
-  --verbose          Print things.
-  -f, --force        Don't ask for destructive operations like import
-  --format=<format>  The people.json format version (2 default, 3 partially supported)
+  -h, --help             Print this message and exit.
+  -c, --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/database.json].
+  -V, --version          Print version info and exit.
+  -v, --verbose          Print things.
+  -f, --force            Don't ask for destructive operations like import
+  -F <format>, --format=<format>  The people.json format version (3 default, 2 will convert)
+  -b <name>, --by=<name> The user who wants to perform the status change, defaults to shell username if allowed
 
 """
 
@@ -49,6 +49,8 @@ DEFAULT_CONFIG = {
 
 def transaction(func):
     def func_wrapper(self, *args, **kwargs):
+        if 'cur' in kwargs and kwargs['cur'] is not None:
+            return func(self, *args, **kwargs)
         with self.conn:
             with self.conn.cursor() as cur:
                 return func(self, *args, cur=cur, **kwargs)
@@ -165,16 +167,63 @@ class PeopleDB:
 
         return self.person_modify_data(person, _del_key)
 
-    @transaction
-    def person_add(self, uid, cur=None, version=3):
-        cur.execute("INSERT INTO people (wmbid, data, version) VALUES (%s, %s, %s)", (uid, {}, version))
+    def person_append_status(self, uid, status, by, date, reason=None, cur=None):
+        allowed_statuses = ['disabled', 'former', 'founding', 'guest', 'invited', 'later']
+        allowed_reasons = ['coc', 'guest', 'inactivity', 'request', 'vetoed']
+        if status not in allowed_statuses:
+            raise ValueError("Status must be one of {}".format(allowed_statuses))
 
-    def people_list(self):
-        obj = self.obj_dump()
-        if type(obj) is list:
-            return [obj['id'] for obj in obj]
-        else:
-            return [key for key, person in obj.items()]
+        if status in ['former', 'disabled']:
+            if not reason or reason not in allowed_reasons:
+                raise ValueError("Status '{}' must have a reason associated. Value reasons are: {}".format(status, allowed_reasons))
+        elif reason:
+            raise ValueError("Status '{}' must not have a reason".format(status))
+
+        if not date.tzinfo:
+            date = date.replace(tzinfo=datetime.timezone.utc)
+
+        people = self.people_list()
+        if by not in people:
+            raise ValueError("Status update doesn't have a valid person associated. You must specify a valid wmbid.")
+
+        history = self.person_get_key(uid, 'statusHistory')
+        if history[-1]['status'] == status:
+            raise ValueError("Status '{}' is the same as the previous status. The status must be different than before.".format(status))
+
+        def _modify(uid, obj):
+            nonlocal status, by, date, reason
+            status_item = {
+                'by': by,
+                'status': status,
+                'date': date.isoformat()
+            }
+            if reason:
+                status_item['reason'] = reason
+            obj['statusHistory'].append(status_item)
+            return obj
+
+        return self.person_modify_data(uid, _modify)
+
+
+    @transaction
+    def person_add_empty(self, uid, cur=None, version=3):
+        if uid in self.people_list():
+            raise ValueError("Person {} already exists. Can't add.".format(uid))
+        person = {
+            "statusHistory": []
+        }
+        cur.execute("INSERT INTO people (wmbid, data, version) VALUES (%s, %s, %s)", (uid, person, version))
+
+    @transaction
+    def person_delete(self, uid, cur=None):
+        cur.execute("DELETE FROM people WHERE wmbid = %s", (uid,))
+
+    @transaction
+    def people_list(self, cur=None):
+        cur.execute("SELECT wmbid FROM people")
+        result = cur.fetchall()
+        if result:
+            return [p[0] for p in result]
 
     @transaction
     def person_generate_token(self, uid, cur=None):
@@ -574,15 +623,65 @@ if __name__ == "__main__":
         print(ppl)
 
     elif arguments['add']:
-        ppl = db.person_add()
+        wmbid = arguments['<name>']
+        status = arguments['<status>']
+        by = arguments['--by']
 
-    elif arguments['gentoken']:
-        if not '<name>' in arguments:
-            print('token: No Wurstmineberg ID given')
-        else:
-            uid = arguments['<name>']
-            token = db.person_generate_token(uid)
-            print("Generated token for '{}': {}".format(uid, token))
+        if status not in ['guest', 'invited']:
+            print("Error: You can only add a person with the status guest and invited.", file=sys.stderr)
+            exit(1)
+
+        if not by:
+            print("Error: Need to specify --by for status guest and invited.", file=sys.stderr)
+            exit(1)
+
+        if wmbid in db.people_list():
+            print("Error: User '{}' already exists.".format(wmbid), file=sys.stderr)
+            exit(1)
+
+        try:
+            db.person_add_empty(wmbid)
+            date = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+            db.person_append_status(wmbid, status, by, date, reason=None)
+        except ValueError as e:
+            print("Error: {}".format(e), file=sys.stderr)
+            db.person_delete(wmbid)
+            exit(1)
+
+    elif arguments['status']:
+        wmbid = arguments['<name>']
+        status = arguments['<status>']
+        reason = arguments.get('<reason>', None)
+        by = arguments['--by']
+
+        if not by:
+            if status in ['guest', 'invited'] or (status == 'former' and reason == 'vetoed'):
+                print("Error: Need to specify --by manually for this status.", file=sys.stderr)
+                exit(1)
+            else:
+                import getpass
+                by = getpass.getuser()
+                idlist = db.people_list()
+                if by not in idlist:
+                    print("Unkown user. Please run people.py as your user account to associate this action with you or specify the 'by' parameter.", file=sys.stdout)
+                    exit(1)
+
+        date = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+
+        try:
+            db.person_append_status(wmbid, status, by, date, reason=reason)
+        except ValueError as e:
+            print("Error: {}".format(e), file=sys.stderr)
+            exit(1)
+
+    # currently not used
+    #elif arguments['gentoken']:
+    #    if not '<name>' in arguments:
+    #        print('token: No Wurstmineberg ID given')
+    #    else:
+    #        uid = arguments['<name>']
+    #        token = db.person_generate_token(uid)
+    #        print("Generated token for '{}': {}".format(uid, token))
 
 
     db.disconnect()
