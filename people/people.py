@@ -281,10 +281,18 @@ class PersonConverter:
         oldp = self.person_obj
         newp = {
             'minecraft': {},
-            'statusHistory': [{}]
+            'statusHistory': []
         }
 
         log_msg = 'Warning: Convert people.json v2 to v3: ID "{}": '.format(self.uid)
+        current_status = {
+        }
+        previous_status = {
+        }
+
+        # 'When not specified, the value is assumed to be "later"'
+        if not 'status' in oldp:
+            oldp['status'] = 'later'
 
         for key, value in oldp.items():
             if key == 'description':
@@ -314,22 +322,29 @@ class PersonConverter:
                 pass
             elif key == 'status':
                 if value in ['former', 'founding', 'invited', 'later']:
-                    newp['statusHistory'][0]['status'] = value
+                    current_status['status'] = value
                 elif value == 'postfreeze':
-                    newp['statusHistory'][0]['status'] = 'later'
+                    current_status['status'] = 'later'
                 elif value == 'vetoed':
-                    newp['statusHistory'][0]['status'] = 'former'
-                    newp['statusHistory'][0]['reason'] = 'vetoed'
+                    current_status['status'] = 'former'
+                    current_status['reason'] = 'vetoed'
+
+                if value == 'former':
+                    # This is a former member but if they are former they must have been whitelisted before
+                    # They can't have been founding though so they must have been 'later'
+                    previous_status['status'] = 'later'
+                    if 'invitedBy' in oldp:
+                        previous_status['by'] = oldp['invitedBy']
             elif key == 'invitedBy':
                 if ('status' in oldp and oldp['status'] in ['founding', 'later', 'postfreeze', 'invited']) or 'status' not in oldp:
-                    newp['statusHistory'][0]['by'] = value
+                    current_status['by'] = value
                 else:
-                    print(log_msg + 'InvitedBy given but not able to match status. Please fix manually', file=sys.stderr)
+                    previous_status['by'] = value
             elif key == 'join_date':
                 if ('status' in oldp and oldp['status'] in ['founding', 'later', 'postfreeze', 'invited']) or 'status' not in oldp:
-                    newp['statusHistory'][0]['date'] = value
+                    current_status['date'] = value
                 else:
-                    print(log_msg + 'join_date given but not able to match status. Please fix manually', file=sys.stderr)
+                    previous_status['date'] = value
             elif key == 'slack':
                 newp['slack'] = value
             elif key == 'twitter':
@@ -346,6 +361,11 @@ class PersonConverter:
             else:
                 # Print if we ignored any keys
                 print(log_msg + 'Ignoring unkown entry for key {}'.format(key), file=sys.stderr)
+
+        if len(previous_status.items()) >= 1:
+            newp['statusHistory'].append(previous_status)
+        if len(current_status.items()) >= 1:
+            newp['statusHistory'].append(current_status)
 
         return newp
 
@@ -423,10 +443,11 @@ class PersonConverter:
                         if not sortdate:
                             sortdate = iso8601.parse_date(item['date'])
                         # was there some kind of join activity going on?
-                        if 'status' in item and item['status'] in ['former', 'founding', 'later']:
+                    if 'status' in item and item['status'] in ['former', 'founding', 'later', 'invited', 'guest']:
+                        if 'date' in item and not 'join_date' in v2:
                             v2['join_date'] = item['date']
-                            if 'by' in item:
-                                v2['invitedBy'] = item['by']
+                        if 'by' in item and not 'invitedBy' in v2:
+                            v2['invitedBy'] = item['by']
                 # We really need a date here. If we couldn't find one just take today
                 if not sortdate:
                     print(log_msg + "Doesn't have sort date for {}".format(self.uid), file=sys.stderr)
@@ -441,7 +462,7 @@ class PersonConverter:
             elif key == 'wiki':
                 if value.startswith('User:'):
                     v2['wiki'] = value[len('User:'):]
-            elif key in ['mojira', 'openID', 'slack']:
+            elif key in ['mojira', 'openID', 'slack', '_peopleV2Order']:
                 pass
             else:
                 # Print if we ignored any keys
