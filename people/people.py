@@ -6,8 +6,9 @@
 Usage:
   people [options] dump [<filename>]
   people [options] import <filename>
-  people [options] get <name> [<key>]
-  people [options] set <name> <key> <value>
+  people [options] getkey <name> [<key>]
+  people [options] setkey <name> <key> <value>
+  people [options] delkey <name> <key>
   people [options] list
   people [options] gentoken <name>
   people [options] add <person>
@@ -134,7 +135,7 @@ class PeopleDB:
             raise KeyError("Person '{}' does not exist in the database".format(person))
 
     @transaction
-    def person_set_key(self, person, key, data, cur=None):
+    def person_modify_data(self, person, modification_function, cur=None):
         # Select the row for update, this activates row level locking
         # We don't update in place because this is only available in psql 9.5 :(
         cur.execute("SELECT data FROM people WHERE wmbid = %s FOR UPDATE", (person,))
@@ -144,8 +145,28 @@ class PeopleDB:
         obj = result[0]
 
         # Update the data at key
-        dpath.util.set(obj, key, data, separator='.')
+        obj = modification_function(person, obj)
+
+        # Update in database
         cur.execute("UPDATE people SET data = %s WHERE wmbid=%s", (obj, person))
+
+    @transaction
+    def person_set_key(self, person, key, data, cur=None):
+        def _set_key(person, obj):
+            nonlocal key, data
+            dpath.util.new(obj, key, data, separator='.')
+            return obj
+
+        return self.person_modify_data(person, _set_key)
+
+    @transaction
+    def person_del_key(self, person, key, cur=None):
+        def _del_key(person, obj):
+            nonlocal key
+            dpath.util.delete(obj, key, separator='.')
+            return obj
+
+        return self.person_modify_data(person, _del_key)
 
     @transaction
     def person_add(self, uid, cur=None, version=2):
@@ -321,7 +342,7 @@ if __name__ == "__main__":
                 exit(1)
             db.json_import(data)
 
-    elif arguments['get']:
+    elif arguments['getkey']:
         try:
             if arguments['<key>']:
                 data = db.person_get_key(arguments['<name>'], arguments['<key>'])
@@ -332,12 +353,29 @@ if __name__ == "__main__":
             print("Key not found: '{}'".format(arguments['<key>']), file=sys.stderr)
             exit(1)
 
-    elif arguments['set']:
+    elif arguments['setkey']:
+        value = arguments['<value>']
         try:
-            db.person_set_key(arguments['<name>'], arguments['<key>'], arguments['<value>'])
+            data = json.loads(value)
+        except ValueError:
+            quotes = ['"', "'"]
+            if len(value) >= 2 and value[0] in quotes and value[-1] in quotes:
+                # quoted string or JSON
+                unquoted = value[1:-1]
+                try:
+                    data = json.loads(unquoted)
+                except ValueError:
+                    data = unquoted
+            else:
+                data = value
+
+        db.person_set_key(arguments['<name>'], arguments['<key>'], data)
+
+    elif arguments['delkey']:
+        try:
+            db.person_del_key(arguments['<name>'], arguments['<key>'])
         except KeyError as e:
-            print(e)
-            exit(1)
+            print("Key doesn't exist: '{}'".format(arguments['<key>']))
 
     elif arguments['list']:
         ppl = db.people_list()
