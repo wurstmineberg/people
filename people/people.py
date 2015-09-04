@@ -499,7 +499,7 @@ class PersonConverter:
                             v2['invitedBy'] = item['by']
                 # We really need a date here. If we couldn't find one just take today
                 if not sortdate:
-                    print(log_msg + "Doesn't have sort date for {}".format(self.uid), file=sys.stderr)
+                    print(log_msg + "Doesn't have sort date.", file=sys.stderr)
                     sortdate = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
                 v2['SORT_DATE'] = sortdate
 
@@ -532,13 +532,14 @@ def prompt_yesno(text, default=False):
             sys.stdout.write('Please respond with \'y\' or \'n\': ')
 
 if __name__ == "__main__":
-    arguments = docopt(__doc__, version='Minecraft backup roll ' + __version__)
-    CONFIG_FILE = pathlib.Path(arguments['--config'])
-
+    arguments = docopt(__doc__, version='Minecraft people ' + __version__)
     CONFIG = DEFAULT_CONFIG.copy()
-    with contextlib.suppress(FileNotFoundError):
-        with CONFIG_FILE.open() as config_file:
-            CONFIG.update(json.load(config_file))
+    if arguments['--config']:
+        CONFIG_FILE = pathlib.Path(arguments['--config'])
+        with contextlib.suppress(FileNotFoundError):
+            with CONFIG_FILE.open() as config_file:
+                CONFIG.update(json.load(config_file))
+
 
     verbose = False
     if arguments['--verbose']:
