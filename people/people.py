@@ -22,7 +22,7 @@ Options:
   -f, --force        Don't ask for destructive operations like import
   --format=<format>  The people.json format version (3 default, 2 will convert)
   --by=<name>        The user who wants to perform the status change, defaults to shell username if allowed
-
+  -r, --raw          Interpret the <value> parameter for setkey as a raw string. [default: false]
 """
 
 # This script requires python3-psycopg2 and dpath
@@ -566,7 +566,7 @@ if __name__ == "__main__":
     if '<filename>' in arguments:
         filename = arguments['<filename>']
 
-    format_version = 2
+    format_version = 3
     if '--format' in arguments and arguments['--format']:
         format_version = int(arguments['--format'])
 
@@ -599,7 +599,7 @@ if __name__ == "__main__":
         try:
             if arguments['<key>']:
                 data = db.person_get_key(arguments['<name>'], arguments['<key>'])
-                print(data)
+                print(json.dumps(data))
             else:
                 data = db.person_show(arguments['<name>'])
         except KeyError as e:
@@ -608,19 +608,14 @@ if __name__ == "__main__":
 
     elif arguments['setkey']:
         value = arguments['<value>']
-        try:
-            data = json.loads(value)
-        except ValueError:
-            quotes = ['"', "'"]
-            if len(value) >= 2 and value[0] in quotes and value[-1] in quotes:
-                # quoted string or JSON
-                unquoted = value[1:-1]
-                try:
-                    data = json.loads(unquoted)
-                except ValueError:
-                    data = unquoted
-            else:
-                data = value
+        if arguments['--raw']:
+            data = value
+        else:
+            try:
+                data = json.loads(value)
+            except ValueError as e:
+                print("Can't parse input as valid JSON. If you want to input a string please quote it or specify the -r option.", file=sys.stderr)
+                exit(1)
 
         db.person_set_key(arguments['<name>'], arguments['<key>'], data)
 
