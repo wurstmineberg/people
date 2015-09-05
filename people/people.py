@@ -46,6 +46,7 @@ __version__ = '0.1'
 DEFAULT_CONFIG = {
     "connectionstring": "postgresql://localhost/wurstmineberg",
 }
+DEFAULT_CONFIGFILE = "/opt/wurstmineberg/config/database.json"
 
 def transaction(func):
     def func_wrapper(self, *args, **kwargs):
@@ -531,16 +532,26 @@ def prompt_yesno(text, default=False):
         except ValueError:
             sys.stdout.write('Please respond with \'y\' or \'n\': ')
 
-if __name__ == "__main__":
-    arguments = docopt(__doc__, version='Minecraft people ' + __version__)
-    CONFIG = DEFAULT_CONFIG.copy()
-    if arguments['--config']:
-        CONFIG_FILE = pathlib.Path(arguments['--config'])
+def get_config(filename=None):
+    cfg = DEFAULT_CONFIG.copy()
+    if filename:
+        CONFIG_FILE = pathlib.Path(filename)
         with contextlib.suppress(FileNotFoundError):
             with CONFIG_FILE.open() as config_file:
-                CONFIG.update(json.load(config_file))
+                cfg.update(json.load(config_file))
+    return cfg
 
 
+if __name__ != "__main__":
+    CONFIG = get_config(DEFAULT_CONFIGFILE)
+
+def get_people_db(verbose=False):
+    db = PeopleDB(CONFIG['connectionstring'], verbose=verbose)
+    return db
+
+if __name__ == "__main__":
+    arguments = docopt(__doc__, version='Minecraft people ' + __version__)
+    CONFIG = get_config(arguments['--config'])
     verbose = False
     if arguments['--verbose']:
         verbose = True
