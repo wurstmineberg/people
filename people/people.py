@@ -15,13 +15,13 @@ Usage:
   people (--help | --version)
 
 Options:
-  -h, --help        Print this message and exit.
+  -h, --help         Print this message and exit.
   --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/database.json].
-  --version         Print version info and exit.
-  -v, --verbose     Print things.
-  -f, --force       Don't ask for destructive operations like import
-  --format=<format> The people.json format version (3 default, 2 will convert)
-  --by=<name>       The user who wants to perform the status change, defaults to shell username if allowed
+  --version          Print version info and exit.
+  -v, --verbose      Print things.
+  -f, --force        Don't ask for destructive operations like import
+  --format=<format>  The people.json format version (3 default, 2 will convert)
+  --by=<name>        The user who wants to perform the status change, defaults to shell username if allowed
 
 """
 
