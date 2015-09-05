@@ -1,0 +1,272 @@
+{
+    "id": "person_schema_v3.json",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "people.json v3 person object",
+    "description": "A Wurstmineberg people.json person object",
+    "type": "object",
+    "properties": {
+        "alt": {
+            "description": "An array of objects formatted like the 'minecraft' object below, representing alternate Minecraft accounts of the user which have access to the main world in Spectator mode.",
+            "type": "array",
+            "items": {
+                "oneOf": [{"$ref": "#/definitions/minecraft_account"}]
+            }
+        },
+        "base": {
+            "description": "An array of objects representing bases. Each base object contains any of the following pairs, all optional",
+            "type": "array",
+            "items": {
+                "oneOf": [{
+                    "$ref": "#/definitions/base"
+                }]
+            }
+        },
+        "description": {
+            "description": "A string containing a characterization of the person. May contain the following HTML tags for formatting: <a href><em><s><span class=\"muted\">",
+            "type": "string"
+        },
+        "favColor": {
+            "description": "An object containing three pairs named \"blue\", \"green\" and \"red\", each with an integer value between 0 and 255 inclusive, representing the person's favorite color in RGB format. This color is used to color-code diagrams. The default favorite color is transparent.",
+            "$ref": "#/definitions/color"
+        },
+        "gravatar": {
+            "description": "A string containing an email address. If specified and a Gravatar is associated with the address, it will be used as the person's avatar on the website. Otherwise, the head from their Minecraft skin will be used.",
+            "$ref": "#/definitions/email"
+        },
+        "minecraft": {
+            "description": "An object containing Minecraft account information",
+            "$ref": "#/definitions/minecraft_account"
+        },
+        "mojira": {
+            "description": "A string containing the person's username on Mojira",
+            "type": "string"
+        },
+        "name": {
+            "description": "A string containing the person's display name. This name will be used when there is no context-specific username (e.g. IRC or Minecraft) to use for the person. For example, the website and this wiki both use display names. The display name defaults to the person's Wurstmineberg ID.",
+            "type": "string"
+        },
+        "options": {
+            "description": "An object containing the options that are set for the person. Keys consist of ASCII lowercase letters and underscores. Values are boolean. For info on what individual options do, see the !Option command's documentation.",
+            "type": "object",
+            "additionalProperties": false,
+            "patternProperties": {
+                "[a-z_]": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "slack": {
+            "description": "An object containing Slack account information:",
+            "additionalProperties": false,
+            "type": "object",
+            "properties": {
+                "username": {
+                    "description": "A string containing the person's current @username on Slack, not including the @ prefix.",
+                    "type": "string",
+                    "pattern": "[a-z0-9][a-z0-9._-]"
+                },
+                "id": {
+                    "description": "A string containing the ID of the person's Slack account. Unlike the @username, this is expected not to change, and the \"username\" field may be updated automatically using the value of this field.",
+                    "type": "string",
+                    "pattern": "U([0-9A-Z]*)"
+                }
+            }
+        },
+        "statusHistory": {
+            "description": "A chronologically sorted array of status change objects.",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "properties": {
+                    "by": {
+                        "description": "The Wurstmineberg ID of the person who performed the status change, e.g. the person who invited this person, the op who executed the !Whitelist command, or the person who vetoed them. For a whitelisting event of a person who joined before the whitelist freeze, this is the person who introduced them to the server. This field is omitted when it is unknown who performed the status change.",
+                        "type": "string",
+                        "pattern": "[a-z][a-z0-9]{1,15}"
+                    },
+                    "date": {
+                        "description": "A string representing the date and time the status change happened. Formatted as an ISO 8601 date string in UTC. It may or may not include the time of day. The first \"date\" value in a person's status history determines the canonical sorting order for people. If it is missing, the person is sorted after everyone else, ASCIIbetically by Wurstmineberg ID.",
+                        "type": "string",
+                        "pattern": "([\\+-]?\\d{4}(?!\\d{2}\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?"
+                    },
+                    "reason": {
+                        "description": "Required when \"status\" is \"former\": the reason the person was removed from the whitelist or prevented from being whitelisted.",
+                        "type": "string",
+                        "pattern": "(coc|guest|inactivity|request|vetoed)"
+                    },
+                    "status": {
+                        "description": "Required: a string specifying the person's status after the status change",
+                        "type": "string",
+                        "pattern": "(disabled|former|founding|guest|invited|later)"
+                    }
+                },
+                "required": ["status"]
+            }
+        },
+        "twitter": {
+            "description": "An object containing Twitter account information",
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "id": {
+                    "description": "A number containing the ID of the person's Twitter account. Unlike the @username, this is expected not to change, and the \"username\" field may be updated automatically using the value of this field.",
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "username": {
+                    "description": "A string containing the person's current @username on Twitter, not including the @ prefix.",
+                    "type": "string",
+                    "pattern": "[A-Za-z0-9_]+"
+                }
+            }
+        },
+        "website": {
+            "description": "A string containing an http: or https: URL to a personal website",
+            "$ref": "#definitions/url"
+        },
+        "wiki": {
+            "description": "A string containing either the person's username on this wiki, including the User: prefix, or the title (not display title) of their article if they don't have an account.",
+            "type": "string",
+            "pattern": "(User:)?[A-Za-z_]+"
+        }
+    },
+    "additionalProperties": true,
+    "definitions": {
+        "base": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "name": {
+                    "description": "The base's name",
+                    "type": "string"
+                },
+                "hubX": {
+                    "description": "The x coordinate of the hub ID for the Newther Hub from which the base can be accessed",
+                    "type": "integer"
+                },
+                "hubZ": {
+                    "description": "The z coordinate of the hub ID for the Newther Hub from which the base can be accessed",
+                    "type": "integer"
+                },
+                "tunnel": {
+                    "description": "A number specifying which tunnel of the wall leads to the base. -3 for the leftmost tunnel (light blue), 3 for the rightmost tunnel (black)",
+                    "type": "integer",
+                    "oneOf": [{
+                        "minimum": -3,
+                        "maximum": -1
+                    }, {
+                        "minimum": 1,
+                        "maximum": 3
+                    }
+                    ]
+                },
+                "tunnelItem": {
+                    "description": "An object representing the Minecraft item used for the item frame that labels the tunnel from the hub to the base. The format is an item stub representing a specific item. If unspecified, a dye item with the color of the base's tunnel is used as a placeholder.",
+                    "$ref": "#/definitions/item_stub"
+                },
+                "wall": {
+                    "description": "The tunnel's wall. \"N\" for north (red), \"E\" for east (green), \"S\" for south (yellow), or \"W\" for west (blue).",
+                    "type": "string",
+                    "pattern": "[NESW]"
+                }
+            }
+        },
+        "color": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "red": {"$ref": "#/definitions/color/definitions/colorValue"},
+                "green": {"$ref": "#/definitions/color/definitions/colorValue"},
+                "blue": {"$ref": "#/definitions/color/definitions/colorValue"}
+            },
+            "required": ["blue", "green", "red"],
+            "definitions": {
+                "colorValue": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 255
+                }
+            }
+        },
+        "email": {
+            "type": "string",
+            "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,4}"
+        },
+        "item_stub_id": {
+            "type": "string",
+            "description": "The new-style item ID",
+            "pattern": "[0-9a-z_]+:[0-9a-z_]+"
+        },
+        "item_stub_object": {
+            "type": "object",
+            "additionalProperties": true,
+            "oneOf": [{
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {},
+                        "damage": {
+                            "description": "The damage value.",
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["id", "damage"]
+                }, {
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {},
+                        "effect": {
+                            "description": "The new-style status effect ID",
+                            "type": "integer"
+                        }
+                    },
+                    "required": ["id", "effect"]
+                }, {
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {},
+                        "tagValue": {
+                            "description": "The value of the required NBT tag (as specified by tagPath in the item info)"
+                        }
+                    },
+                    "required": ["id", "tagValue"]
+                }, {
+                    "additionalProperties": false,
+                    "properties": {
+                        "id": {}
+                    }
+                }
+            ],
+            "properties": {
+                "id": {
+                    "$ref": "#/definitions/item_stub_id"
+                }
+            }
+        },
+        "item_stub": {
+            "oneOf": [
+                {"$ref": "#/definitions/item_stub_id"},
+                {"$ref": "#/definitions/item_stub_object"}
+            ]
+        },
+        "minecraft_account": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+                "nicks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "uuid": {
+                    "type": "string",
+                    "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-[34][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}"
+                }
+            }
+        },
+        "url": {
+            "type": "string",
+            "pattern": "https?://[^\\s/$.?#].[^\\s]*"
+        }
+    }
+}

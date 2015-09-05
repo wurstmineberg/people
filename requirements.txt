@@ -3,3 +3,5 @@ dpath
 passlib
 docopt
 iso8601
+getpass
+jsonschema

@@ -1,0 +1,24 @@
+{
+    "id": "people_schema_v3.json",
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "title": "people.json v3",
+    "description": "The Wurstmineberg people.json file",
+    "type": "object",
+    "properties": {
+        "version": {
+            "description": "The root object",
+            "type": "integer",
+            "minimum": 3,
+            "maximum": 3
+        },
+        "people": {
+            "description": "Each pair in this object represents a person. The pair's name contains the person's Wurstmineberg ID. A Wurstmineberg ID consists of 2 to 16 ASCII lowercase letters and numbers. The first character must be a letter. All pairs in the object are optional",
+            "type": "object",
+            "patternProperties": {
+                "[a-z][a-z0-9]{1,15}": {"$ref": "file:person_schema_v3.json#"}
+            }
+        }
+    },
+    "additionalProperties": false,
+    "required": ["version", "people"]
+}

@@ -6,6 +6,7 @@
 Usage:
   people [options] dump [<filename>]
   people [options] import <filename>
+  people [options] validate
   people [options] getkey <name> [<key>]
   people [options] setkey <name> <key> <value>
   people [options] delkey <name> <key>
@@ -39,6 +40,7 @@ import os
 from distutils.util import strtobool
 import uuid
 import iso8601
+import jsonschema
 
 from docopt import docopt
 
@@ -47,6 +49,15 @@ DEFAULT_CONFIG = {
     "connectionstring": "postgresql://localhost/wurstmineberg",
 }
 DEFAULT_CONFIGFILE = "/opt/wurstmineberg/config/database.json"
+
+package_dir = os.path.abspath(os.path.dirname(__file__))
+with open(os.path.join(package_dir, "schemas", "person_schema_v3.json"), "r") as f:
+    VERSION_3_PERSON_OBJECT_SCHEMA = json.load(f)
+
+with open(os.path.join(package_dir, "schemas", "people_schema_v3.json"), "r") as f:
+    VERSION_3_SCHEMA = json.load(f)
+
+SCHEMA_RESOLVER = jsonschema.RefResolver('file://' + package_dir + '/schemas/', None)
 
 def transaction(func):
     def func_wrapper(self, *args, **kwargs):
@@ -67,6 +78,19 @@ class PeopleDB:
     def disconnect(self):
         self.conn.close()
         self.conn = None
+
+    def validate_schema(self, person, schema):
+        try:
+            jsonschema.validate(person, schema, resolver = SCHEMA_RESOLVER)
+        except jsonschema.exceptions.ValidationError as e:
+            return (False, e)
+        return (True, None)
+
+    def validate_person_schema(self, obj):
+        return self.validate_schema(obj, VERSION_3_PERSON_OBJECT_SCHEMA)
+
+    def validate_obj_schema(self, obj):
+        return self.validate_schema(obj, VERSION_3_SCHEMA)
 
     @transaction
     def obj_dump(self, cur=None, version=3):
@@ -146,6 +170,11 @@ class PeopleDB:
 
         # Update the data at key
         obj = modification_function(person, obj)
+
+        # Validate the obj
+        valid, error = self.validate_person_schema(obj)
+        if not valid:
+            raise ValueError("Schema is not valid! Error: {}".format(error))
 
         # Update in database
         cur.execute("UPDATE people SET data = %s WHERE wmbid=%s", (obj, person))
@@ -679,6 +708,16 @@ if __name__ == "__main__":
             db.person_append_status(wmbid, status, by, date, reason=reason)
         except ValueError as e:
             print("Error: {}".format(e), file=sys.stderr)
+            exit(1)
+
+    elif arguments['validate']:
+        data = db.obj_dump(version=format_version)
+        valid, error = db.validate_obj_schema(data)
+        if valid:
+            if verbose:
+                print("The data in the database is valid according to the schema!")
+        else:
+            print("The data in the database is invalid according to the schema. The following error occured: {}".format(error))
             exit(1)
 
     # currently not used
