@@ -52,7 +52,7 @@ DEFAULT_CONFIGFILE = "/opt/wurstmineberg/config/database.json"
 
 file_abspath = os.path.abspath(__file__)
 while os.path.islink(file_abspath):
-    file_abspath = os.readlink(l)
+    file_abspath = os.readlink(file_abspath)
 
 package_dir = os.path.dirname(file_abspath)
 with open(os.path.join(package_dir, "schemas", "person_schema_v3.json"), "r") as f:
