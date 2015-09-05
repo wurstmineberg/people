@@ -4,6 +4,7 @@
     "title": "people.json v3 person object",
     "description": "A Wurstmineberg people.json person object",
     "type": "object",
+    "additionalProperties": false,
     "properties": {
         "alt": {
             "description": "An array of objects formatted like the 'minecraft' object below, representing alternate Minecraft accounts of the user which have access to the main world in Spectator mode.",
@@ -130,7 +131,6 @@
             "pattern": "(User:)?[A-Za-z_]+"
         }
     },
-    "additionalProperties": true,
     "definitions": {
         "base": {
             "type": "object",

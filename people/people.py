@@ -297,26 +297,16 @@ class PeopleConverter:
     def _convert_v3_v2(self):
         # We just need to convert the users and sort them.
         v2_people = []
-        has_legacy_order = True
         for wmbid, value in self.obj['people'].items():
             personconv = PersonConverter(wmbid, value, 3)
             person = personconv.get_version(2)
             v2_people.append(person)
-            if '_peopleV2Order' in value:
-                person['_peopleV2Order'] = value['_peopleV2Order']
-            else:
-                has_legacy_order = False
-        if has_legacy_order:
-            v2_people.sort(key=lambda p: p['_peopleV2Order'])
-        else:
-            v2_people.sort(key=lambda p: p['SORT_DATE'])
 
+        v2_people.sort(key=lambda p: p['SORT_DATE'])
 
         # remove the temporary date
         for person in v2_people:
             del person['SORT_DATE']
-            if '_peopleV2Order' in person:
-                del person['_peopleV2Order']
 
         return {
             "people": v2_people,
@@ -326,20 +316,16 @@ class PeopleConverter:
     def _convert_v2_v3(self):
         # This is even easier.
         people = {}
-        index = 0
         for person in self.obj['people']:
             wmbid = person['id']
             # save the order
             personconv = PersonConverter(wmbid, person, 2)
             people[wmbid] = personconv.get_version(3)
-            people[wmbid]['_peopleV2Order'] = index
-            index += 1
 
         return {
             "people": people,
             "version": 3
         }
-
 
 
 class PersonConverter:
@@ -545,7 +531,7 @@ class PersonConverter:
             elif key == 'wiki':
                 if value.startswith('User:'):
                     v2['wiki'] = value[len('User:'):]
-            elif key in ['mojira', 'openID', 'slack', '_peopleV2Order']:
+            elif key in ['mojira', 'openID', 'slack']:
                 pass
             else:
                 # Print if we ignored any keys
