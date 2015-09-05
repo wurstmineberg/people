@@ -16,7 +16,7 @@ Usage:
 
 Options:
   -h, --help        Print this message and exit.
-  -c, --config=<config> Path to the config file [default: /opt/wurstmineberg/config/database.json].
+  --config=<config>  Path to the config file [default: /opt/wurstmineberg/config/database.json].
   --version         Print version info and exit.
   -v, --verbose     Print things.
   -f, --force       Don't ask for destructive operations like import
