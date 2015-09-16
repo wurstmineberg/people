@@ -466,9 +466,9 @@ class PersonConverter:
                 if 'uuid' in value:
                     v2['minecraftUUID'] = value['uuid']
                 if 'nicks' in value:
-                    v2['minecraft'] = value['nicks'][0]
+                    v2['minecraft'] = value['nicks'][-1]
                     if len(value['nicks']) >= 2:
-                        v2['minecraft_previous'].extend(value['nicks'][1:])
+                        v2['minecraft_previous'].extend(value['nicks'][:-1])
             elif key == 'name':
                 v2['name'] = value
             elif key == 'options':
