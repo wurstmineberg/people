@@ -252,12 +252,18 @@ class PeopleDB:
     def person_delete(self, uid, cur=None):
         cur.execute("DELETE FROM people WHERE wmbid = %s", (uid,))
 
-    @transaction
-    def people_list(self, cur=None):
-        cur.execute("SELECT wmbid FROM people")
-        result = cur.fetchall()
-        if result:
-            return [p[0] for p in result]
+    def people_list(self):
+        def first_date(item):
+            wmb_id, person_data = item
+            for status_change in person_data.get('statusHistory', []):
+                if 'date' in status_change:
+                    date = status_change['date']
+                    break
+            else:
+                date = '9999-99-99 99:99:99'
+            return date + wmb_id
+
+        return [wmb_id for wmb_id, person in sorted(self.obj_dump(version=3)['people'].items(), key=first_date)]
 
     @transaction
     def person_generate_token(self, uid, cur=None):
@@ -646,7 +652,7 @@ if __name__ == "__main__":
 
     elif arguments['list']:
         ppl = db.people_list()
-        print(ppl)
+        print(json.dumps(ppl))
 
     elif arguments['add']:
         wmbid = arguments['<name>']
