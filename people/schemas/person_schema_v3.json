@@ -216,7 +216,8 @@
                         "id": {},
                         "effect": {
                             "description": "The new-style status effect ID",
-                            "type": "integer"
+                            "pattern": "[0-9a-z_]+:[0-9a-z_]+",
+                            "type": "string"
                         }
                     },
                     "required": ["id", "effect"]
