@@ -253,17 +253,23 @@ class PeopleDB:
         cur.execute("DELETE FROM people WHERE wmbid = %s", (uid,))
 
     def people_list(self):
-        def first_date(item):
+        def canonical_sort_key(item):
             wmb_id, person_data = item
             for status_change in person_data.get('statusHistory', []):
                 if 'date' in status_change:
-                    date = status_change['date']
-                    break
-            else:
-                date = '9999-99-99 99:99:99'
-            return date + wmb_id
+                    # sort by first status change with a date
+                    sort_date = iso8601.parse_date(status_change['date'])
+                    date = sort_date.date()
+                    if len(status_change['date']) > len('9999-99-99'):
+                        # time of day included
+                        return False, date, False, wmb_id
+                    else:
+                        # no time of day, sort at the end of the day
+                        return False, date, True, sort_date.time(), wmb_id
+            # people without a date in their status history are sorted after everyone else and by Wurstmineberg ID
+            return True, wmb_id
 
-        return [wmb_id for wmb_id, person in sorted(self.obj_dump(version=3)['people'].items(), key=first_date)]
+        return [wmb_id for wmb_id, person in sorted(self.obj_dump(version=3)['people'].items(), key=canonical_sort_key)]
 
     @transaction
     def person_generate_token(self, uid, cur=None):
@@ -526,7 +532,7 @@ class PersonConverter:
                 # We really need a date here. If we couldn't find one just take today
                 if not sortdate:
                     print(log_msg + "Doesn't have sort date.", file=sys.stderr)
-                    sortdate = datetime.datetime.utcnow().replace(tzinfo=datetime.timezone.utc)
+                    sortdate = datetime.datetime.now(tz=datetime.timezone.utc)
                 v2['SORT_DATE'] = sortdate
 
             elif key == 'twitter':
