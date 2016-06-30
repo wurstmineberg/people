@@ -221,7 +221,7 @@ class PeopleDB:
             raise ValueError("Status update doesn't have a valid person associated. You must specify a valid wmbid.")
 
         history = self.person_get_key(uid, 'statusHistory')
-        if history[-1]['status'] == status:
+        if len(history) > 0 and history[-1]['status'] == status:
             raise ValueError("Status '{}' is the same as the previous status. The status must be different than before.".format(status))
 
         def _modify(uid, obj):
