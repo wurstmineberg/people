@@ -178,14 +178,14 @@
                     "type": "array"
                 },
                 "uuid": {
-                    "pattern": "[0-9a-f]{8}-[0-9a-f]{4}-[34][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+                    "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-[34][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
                     "type": "string"
                 }
             },
             "type": "object"
         },
         "url": {
-            "pattern": "https?://[^\\s/$.?#].[^\\s]*",
+            "pattern": "^https?://[^\\s/$.?#].[^\\s]*$",
             "type": "string"
         }
     },
