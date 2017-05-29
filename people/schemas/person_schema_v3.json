@@ -247,7 +247,6 @@
             "properties": {
                 "id": {
                     "description": "A string containing the ID of the person's Slack account. Unlike the @username, this is expected not to change, and the \"username\" field may be updated automatically using the value of this field.",
-                    "pattern": "U([0-9A-Z]*)",
                     "type": "string"
                 },
                 "username": {
