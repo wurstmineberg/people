@@ -57,8 +57,12 @@
                 },
                 "wall": {
                     "description": "The tunnel's wall. \"N\" for north (red), \"E\" for east (green), \"S\" for south (yellow), or \"W\" for west (blue).",
-                    "pattern": "[NESW]",
-                    "type": "string"
+                    "enum": [
+                        "N",
+                        "E",
+                        "S",
+                        "W"
+                    ]
                 }
             },
             "type": "object"
