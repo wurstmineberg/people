@@ -235,7 +235,7 @@
             "additionalProperties": false,
             "description": "An object containing the options that are set for the person. Keys consist of ASCII lowercase letters and underscores. Values are boolean. For info on what individual options do, see the !Option command's documentation.",
             "patternProperties": {
-                "[a-z_]": {
+                "^[a-z_]+$": {
                     "type": "boolean"
                 }
             },
