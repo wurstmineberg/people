@@ -267,10 +267,10 @@ class PeopleDB:
                     date = sort_date.date()
                     if len(status_change['date']) > len('9999-99-99'):
                         # time of day included
-                        return False, date, False, wmb_id
+                        return False, date, False, sort_date.time(), wmb_id
                     else:
                         # no time of day, sort at the end of the day
-                        return False, date, True, sort_date.time(), wmb_id
+                        return False, date, True, wmb_id
             # people without a date in their status history are sorted after everyone else and by Wurstmineberg ID
             return True, wmb_id
 
