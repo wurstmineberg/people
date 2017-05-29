@@ -94,10 +94,6 @@
             ],
             "type": "object"
         },
-        "email": {
-            "pattern": "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,4}",
-            "type": "string"
-        },
         "item_stub": {
             "oneOf": [
                 {
@@ -227,8 +223,9 @@
             "description": "An object containing three pairs named \"blue\", \"green\" and \"red\", each with an integer value between 0 and 255 inclusive, representing the person's favorite color in RGB format. This color is used to color-code diagrams. The default favorite color is transparent."
         },
         "gravatar": {
-            "$ref": "#/definitions/email",
-            "description": "A string containing an email address. If specified and a Gravatar is associated with the address, it will be used as the person's avatar on the website. Otherwise, the head from their Minecraft skin will be used."
+            "description": "A string containing an email address. If specified and a Gravatar is associated with the address, it will be used as the person's avatar on the website. Otherwise, the head from their Minecraft skin will be used.",
+            "format": "email",
+            "type": "string"
         },
         "minecraft": {
             "$ref": "#/definitions/minecraft_account",
