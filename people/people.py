@@ -85,7 +85,7 @@ class PeopleDB:
 
     def validate_schema(self, person, schema):
         try:
-            jsonschema.validate(person, schema, , format_checker=jsonschema.FormatChecker(), resolver=SCHEMA_RESOLVER)
+            jsonschema.validate(person, schema, format_checker=jsonschema.FormatChecker(), resolver=SCHEMA_RESOLVER)
         except jsonschema.exceptions.ValidationError as e:
             return (False, e)
         return (True, None)
