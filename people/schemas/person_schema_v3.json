@@ -251,7 +251,7 @@
                 },
                 "username": {
                     "description": "A string containing the person's current @username on Slack, not including the @ prefix.",
-                    "pattern": "[a-z0-9][a-z0-9._-]",
+                    "pattern": "^[a-z0-9][a-z0-9._-]*$",
                     "type": "string"
                 }
             },
@@ -261,25 +261,74 @@
             "description": "A chronologically sorted array of status change objects.",
             "items": {
                 "additionalProperties": false,
+                "oneOf": [
+                    {
+                        "properties": {
+                            "status": {
+                                "enum": [
+                                    "former"
+                                ]
+                            }
+                        },
+                        "required": [
+                            "reason"
+                        ]
+                    },
+                    {
+                        "allOf": [
+                            {
+                                "not": {
+                                    "required": [
+                                        "reason"
+                                    ]
+                                }
+                            },
+                            {
+                                "not": {
+                                    "properties": {
+                                        "status": {
+                                            "enum": [
+                                                "former"
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                ],
                 "properties": {
                     "by": {
                         "description": "The Wurstmineberg ID of the person who performed the status change, e.g. the person who invited this person, the op who executed the !Whitelist command, or the person who vetoed them. For a whitelisting event of a person who joined before the whitelist freeze, this is the person who introduced them to the server. This field is omitted when it is unknown who performed the status change.",
-                        "pattern": "[a-z][a-z0-9]{1,15}",
+                        "pattern": "^[a-z][a-z0-9]{1,15}$",
                         "type": "string"
                     },
                     "date": {
                         "description": "A string representing the date and time the status change happened. Formatted as an ISO 8601 date string in UTC. It may or may not include the time of day. The first \"date\" value in a person's status history determines the canonical sorting order for people. If it is missing, the person is sorted after everyone else, ASCIIbetically by Wurstmineberg ID.",
-                        "pattern": "([\\+-]?\\d{4}(?!\\d{2}\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?",
+                        "pattern": "^([\\+-]?\\d{4}(?!\\d{2}\b))((-?)((0[1-9]|1[0-2])(\\3([12]\\d|0[1-9]|3[01]))?|W([0-4]\\d|5[0-2])(-?[1-7])?|(00[1-9]|0[1-9]\\d|[12]\\d{2}|3([0-5]\\d|6[1-6])))([T\\s]((([01]\\d|2[0-3])((:?)[0-5]\\d)?|24\\:?00)([\\.,]\\d+(?!:))?)?(\\17[0-5]\\d([\\.,]\\d+)?)?([zZ]|([\\+-])([01]\\d|2[0-3]):?([0-5]\\d)?)?)?)?$",
                         "type": "string"
                     },
                     "reason": {
                         "description": "Required when \"status\" is \"former\": the reason the person was removed from the whitelist or prevented from being whitelisted.",
-                        "pattern": "(coc|guest|inactivity|request|vetoed)",
+                        "enum": [
+                            "coc",
+                            "guest",
+                            "inactivity",
+                            "request",
+                            "vetoed"
+                        ],
                         "type": "string"
                     },
                     "status": {
                         "description": "Required: a string specifying the person's status after the status change",
-                        "pattern": "(disabled|former|founding|guest|invited|later)",
+                        "enum": [
+                            "disabled",
+                            "former",
+                            "founding",
+                            "guest",
+                            "invited",
+                            "later"
+                        ],
                         "type": "string"
                     }
                 },
