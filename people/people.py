@@ -7,6 +7,7 @@ Usage:
   people [options] dump [<filename>]
   people [options] import <filename>
   people [options] validate
+  people [options] maintenance
   people [options] getkey <name> [<key>]
   people [options] setkey <name> <key> <value>
   people [options] delkey <name> <key>
@@ -238,6 +239,10 @@ class PeopleDB:
 
         return self.person_modify_data(uid, _modify)
 
+    def person_perform_maintenance(self, person):
+        if self.verbose:
+            print('Performing maintenance for {}...'.format(person))
+        raise NotImplementedError() #TODO
 
     @transaction
     def person_add_empty(self, uid, cur=None, version=3):
@@ -720,6 +725,29 @@ if __name__ == "__main__":
                 print("The data in the database is valid according to the schema!")
         else:
             print("The data in the database is invalid according to the schema. The following error occured: {}".format(error))
+            exit(1)
+
+    elif arguments['maintenance']:
+        # validate data before performing maintenance
+        data = db.obj_dump(version=format_version)
+        valid, error = db.validate_obj_schema(data)
+        if valid:
+            if verbose:
+                print("Before maintance, data is valid")
+        else:
+            print("Not performing maintenance, data is already invalid. The following error occured: {}".format(error))
+            exit(1)
+        # perform maintenance
+        for wmb_id in db.people_list():
+            db.person_perform_maintenance(wmb_id)
+        # validate data again
+        data = db.obj_dump(version=format_version)
+        valid, error = db.validate_obj_schema(data)
+        if valid:
+            if verbose:
+                print("After maintenance, data is still valid")
+        else:
+            print("Something went wrong during maintenance, data is now invalid. The following error occured: {}".format(error))
             exit(1)
 
     # currently not used
