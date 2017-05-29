@@ -106,7 +106,7 @@
         },
         "item_stub_id": {
             "description": "The new-style item ID",
-            "pattern": "[0-9a-z_]+:[0-9a-z_]+",
+            "pattern": "^[0-9a-z_]+:[0-9a-z_]+$",
             "type": "string"
         },
         "item_stub_object": {
@@ -131,7 +131,7 @@
                     "properties": {
                         "effect": {
                             "description": "The new-style status effect ID",
-                            "pattern": "[0-9a-z_]+:[0-9a-z_]+",
+                            "pattern": "^[0-9a-z_]+:[0-9a-z_]+$",
                             "type": "string"
                         },
                         "id": {}
