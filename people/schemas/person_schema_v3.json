@@ -7,11 +7,31 @@
             "properties": {
                 "hubX": {
                     "description": "The x coordinate of the hub ID for the Newther Hub from which the base can be accessed",
-                    "type": "integer"
+                    "oneOf": [
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "enum": [
+                                -0.5,
+                                0.5
+                            ]
+                        }
+                    ]
                 },
                 "hubZ": {
                     "description": "The z coordinate of the hub ID for the Newther Hub from which the base can be accessed",
-                    "type": "integer"
+                    "oneOf": [
+                        {
+                            "type": "integer"
+                        },
+                        {
+                            "enum": [
+                                -0.5,
+                                0.5
+                            ]
+                        }
+                    ]
                 },
                 "name": {
                     "description": "The base's name",
