@@ -195,22 +195,14 @@
         "alt": {
             "description": "An array of objects formatted like the 'minecraft' object below, representing alternate Minecraft accounts of the user which have access to the main world in Spectator mode.",
             "items": {
-                "oneOf": [
-                    {
-                        "$ref": "#/definitions/minecraft_account"
-                    }
-                ]
+                "$ref": "#/definitions/minecraft_account"
             },
             "type": "array"
         },
         "base": {
             "description": "An array of objects representing bases. Each base object contains any of the following pairs, all optional",
             "items": {
-                "oneOf": [
-                    {
-                        "$ref": "#/definitions/base"
-                    }
-                ]
+                "$ref": "#/definitions/base"
             },
             "type": "array"
         },
