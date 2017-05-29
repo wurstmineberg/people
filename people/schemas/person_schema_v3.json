@@ -350,7 +350,7 @@
                 },
                 "username": {
                     "description": "A string containing the person's current @username on Twitter, not including the @ prefix.",
-                    "pattern": "[A-Za-z0-9_]+",
+                    "pattern": "^[A-Za-z0-9_]{1,15}$",
                     "type": "string"
                 }
             },
@@ -362,7 +362,6 @@
         },
         "wiki": {
             "description": "A string containing either the person's username on this wiki, including the User: prefix, or the title (not display title) of their article if they don't have an account.",
-            "pattern": "(User:)?[A-Za-z_]+",
             "type": "string"
         }
     },
