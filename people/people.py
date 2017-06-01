@@ -29,21 +29,22 @@ Options:
 
 # This script requires python3-psycopg2 and dpath
 
+import sys
+
+import contextlib
 import datetime
+import distutils.util
+import docopt
+import dpath.util
+import iso8601
 import json
+import jsonschema
+import os
+import pathlib
 import psycopg2
 import psycopg2.extras
-import pathlib
-import contextlib
-import dpath.util
-import sys
-import os
-from distutils.util import strtobool
+import slacker
 import uuid
-import iso8601
-import jsonschema
-
-from docopt import docopt
 
 __version__ = '0.1'
 DEFAULT_CONFIG = {
@@ -240,9 +241,29 @@ class PeopleDB:
         return self.person_modify_data(uid, _modify)
 
     def person_perform_maintenance(self, person):
+        def _update_slack(wmb_id, person_info):
+            if 'username' in person_info.get('slack', {}) and 'id' not in person_info['slack']:
+                if self.verbose:
+                    print('Adding missing Slack user ID...')
+                if 'slackToken' not in CONFIG:
+                    if self.verbose:
+                        print('Missing Slack API token!')
+                slack = slacker.Slacker(CONFIG['slackToken'])
+                for slack_user in slack.users.list().body['members']:
+                    if slack_user['name'] == person_info['slack']['username']:
+                        person_info['slack']['id'] = slack_user['id']
+                        if self.verbose:
+                            print('Slack user ID added')
+                        break
+                else:
+                    if self.verbose:
+                        print('Username not found in Slack team!')
+            return person_info
+
         if self.verbose:
             print('Performing maintenance for {}...'.format(person))
-        raise NotImplementedError() #TODO
+        for fn in [_update_slack]:
+            self.person_modify_data(uid, fn)
 
     @transaction
     def person_add_empty(self, uid, cur=None, version=3):
@@ -564,7 +585,7 @@ def prompt_yesno(text, default=False):
     sys.stderr.write(text + ' ')
     while True:
         try:
-            return strtobool(input().lower())
+            return distutils.util.strtobool(input().lower())
         except ValueError:
             sys.stdout.write('Please respond with \'y\' or \'n\': ')
 
@@ -586,7 +607,7 @@ def get_people_db(verbose=False):
     return db
 
 if __name__ == "__main__":
-    arguments = docopt(__doc__, version='Minecraft people ' + __version__)
+    arguments = docopt.docopt(__doc__, version='Minecraft people ' + __version__)
     CONFIG = get_config(arguments['--config'])
     verbose = False
     if arguments['--verbose']:
