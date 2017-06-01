@@ -263,7 +263,7 @@ class PeopleDB:
         if self.verbose:
             print('Performing maintenance for {}...'.format(person))
         for fn in [_update_slack]:
-            self.person_modify_data(uid, fn)
+            self.person_modify_data(person, fn)
 
     @transaction
     def person_add_empty(self, uid, cur=None, version=3):
