@@ -15,7 +15,6 @@ setuptools.setup(
     install_requires=[
         'docopt',
         'dpath',
-        'getpass',
         'iso8601',
         'jsonschema',
         'passlib',
