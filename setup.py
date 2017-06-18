@@ -11,7 +11,7 @@ setuptools.setup(
     author_email='mail@wurstmineberg.de',
     license='MIT',
     packages=['people'],
-    package_data={'people': ['schemas   /*.json']}
+    package_data={'people': ['schemas   /*.json']}, 
     zip_safe=True,
     install_requires=[
         'docopt',
