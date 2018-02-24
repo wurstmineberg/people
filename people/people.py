@@ -43,6 +43,7 @@ import os
 import pathlib
 import psycopg2
 import psycopg2.extras
+import re
 import slacker
 import uuid
 
@@ -51,6 +52,8 @@ DEFAULT_CONFIG = {
     "connectionstring": "postgresql://localhost/wurstmineberg",
 }
 DEFAULT_CONFIGFILE = "/opt/wurstmineberg/config/database.json"
+
+WMBID_REGEX = '^[a-z][a-z0-9]{1,15}$'
 
 file_abspath = os.path.abspath(__file__)
 while os.path.islink(file_abspath):
@@ -690,6 +693,10 @@ if __name__ == "__main__":
         wmbid = arguments['<name>']
         status = arguments['<status>']
         by = arguments['--by']
+
+        if not re.fullmatch(WMBID_REGEX, wmbid):
+            print("Error: {!r} is not a valid Wurstmineberg ID. Expected format: {}".format(wmbid, WMBID_REGEX), file=sys.stderr)
+            exit(1)
 
         if status not in ['guest', 'invited']:
             print("Error: You can only add a person with the status guest and invited.", file=sys.stderr)
