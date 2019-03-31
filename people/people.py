@@ -115,7 +115,7 @@ class PeopleDB:
                     uid = wmbid
                 converter = PersonConverter(uid, data, v)
                 converter.get_version(3)
-                obj['people'][uid] = converter.get_version(3)
+                obj['people'][str(uid)] = converter.get_version(3)
             # now for converting everything for realsies
             peopleconv = PeopleConverter(obj)
             return peopleconv.get_version(version)
