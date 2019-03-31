@@ -49,7 +49,7 @@ import uuid
 
 __version__ = '0.1'
 DEFAULT_CONFIG = {
-    "connectionstring": "postgresql://localhost/wurstmineberg",
+    "connectionstring": "postgresql:///wurstmineberg",
 }
 DEFAULT_CONFIGFILE = "/opt/wurstmineberg/config/database.json"
 
