@@ -103,12 +103,16 @@ class PeopleDB:
 
     @transaction
     def obj_dump(self, cur=None, version=3):
-        cur.execute("SELECT wmbid, data, version FROM people")
+        cur.execute("SELECT wmbid, snowflake, data, version FROM people")
         result = cur.fetchall()
         if result:
             # use v3 as base as the db probably has v3 anyways
             obj = {"version": 3, "people": {}}
-            for uid, data, v in result:
+            for wmbid, snowflake, data, v in result:
+                if wmbid is None: #TODO prefer snowflake
+                    uid = snowflake
+                else:
+                    uid = wmbid
                 converter = PersonConverter(uid, data, v)
                 converter.get_version(3)
                 obj['people'][uid] = converter.get_version(3)
