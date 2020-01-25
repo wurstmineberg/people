@@ -339,6 +339,21 @@
             },
             "type": "array"
         },
+        "twitch": {
+            "additionalProperties": true,
+            "description": "A Twitch user info obbect, as returned by the Twitch Helix API's Get Users endpoint.",
+            "properties": {
+                "id": {
+                    "description": "User’s ID.",
+                    "type": "string"
+                },
+                "login": {
+                    "description": "User’s login name.",
+                    "type": "string"
+                }
+            },
+            "type": "object"
+        },
         "twitter": {
             "additionalProperties": false,
             "description": "An object containing Twitter account information",
