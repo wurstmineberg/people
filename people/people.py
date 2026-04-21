@@ -43,7 +43,6 @@ import pathlib
 import psycopg2
 import psycopg2.extras
 import re
-import slacker
 import uuid
 
 __version__ = '0.1'
