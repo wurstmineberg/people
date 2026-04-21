@@ -7,7 +7,6 @@ Usage:
   people [options] dump [<filename>]
   people [options] import <filename>
   people [options] validate
-  people [options] maintenance
   people [options] getkey <name> [<key>]
   people [options] setkey <name> <key> <value>
   people [options] delkey <name> <key>
@@ -246,31 +245,6 @@ class PeopleDB:
             return obj
 
         return self.person_modify_data(uid, _modify)
-
-    def person_perform_maintenance(self, person):
-        def _update_slack(wmb_id, person_info):
-            if 'username' in person_info.get('slack', {}) and 'id' not in person_info['slack']:
-                if self.verbose:
-                    print('Adding missing Slack user ID...')
-                if 'slackToken' not in CONFIG:
-                    if self.verbose:
-                        print('Missing Slack API token!')
-                slack = slacker.Slacker(CONFIG['slackToken'])
-                for slack_user in slack.users.list().body['members']:
-                    if slack_user['name'] == person_info['slack']['username']:
-                        person_info['slack']['id'] = slack_user['id']
-                        if self.verbose:
-                            print('Slack user ID added')
-                        break
-                else:
-                    if self.verbose:
-                        print('Username not found in Slack team!')
-            return person_info
-
-        if self.verbose:
-            print('Performing maintenance for {}...'.format(person))
-        for fn in [_update_slack]:
-            self.person_modify_data(person, fn)
 
     @transaction
     def person_add_empty(self, uid, cur=None, version=3):
@@ -758,38 +732,6 @@ if __name__ == "__main__":
         else:
             print("The data in the database is invalid according to the schema. The following error occured: {}".format(error))
             exit(1)
-
-    elif arguments['maintenance']:
-        # validate data before performing maintenance
-        data = db.obj_dump(version=format_version)
-        valid, error = db.validate_obj_schema(data)
-        if valid:
-            if verbose:
-                print("Before maintance, data is valid")
-        else:
-            print("Not performing maintenance, data is already invalid. The following error occured: {}".format(error))
-            exit(1)
-        # perform maintenance
-        for wmb_id in db.people_list():
-            db.person_perform_maintenance(wmb_id)
-        # validate data again
-        data = db.obj_dump(version=format_version)
-        valid, error = db.validate_obj_schema(data)
-        if valid:
-            if verbose:
-                print("After maintenance, data is still valid")
-        else:
-            print("Something went wrong during maintenance, data is now invalid. The following error occured: {}".format(error))
-            exit(1)
-
-    # currently not used
-    #elif arguments['gentoken']:
-    #    if not '<name>' in arguments:
-    #        print('token: No Wurstmineberg ID given')
-    #    else:
-    #        uid = arguments['<name>']
-    #        token = db.person_generate_token(uid)
-    #        print("Generated token for '{}': {}".format(uid, token))
 
 
     db.disconnect()

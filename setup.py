@@ -20,6 +20,5 @@ setuptools.setup(
         'jsonschema',
         'passlib',
         'psycopg2',
-        'slacker'
-    ]
+    ],
 )
